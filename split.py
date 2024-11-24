@@ -9,7 +9,7 @@ def split_json_file(file_path, output_dir):
     
     # 确定总行数
     total_lines = len(data)
-    max_lines = min(total_lines, 1000000)
+    max_lines = min(total_lines, 800)
     
     # 确定划分数量
     split_80 = max_lines * 80 // 100

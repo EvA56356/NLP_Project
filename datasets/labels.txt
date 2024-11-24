@@ -1,2 +1,2 @@
-差评
-好评
+bad review
+good review
