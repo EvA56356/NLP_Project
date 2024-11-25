@@ -1,9 +1,3 @@
-# -*- coding:utf-8 -*-
-# File       : text_classify.py
-# Time       : 02/11/2023 下午 10:55
-# Author     ：rain
-# Description：传统机器学习方法: 决策树、随机森林、XGBOOST、SVM
-#             无法batch学习, 只能最后打印训练结果
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
@@ -98,7 +92,7 @@ def test(args, X_test, test_labels):
 
 
 def main():
-    args = get_argparse().parse_args()  # 训练输入参数处理, 需要新增/修改参数可以进入get_argparse配置
+    args = get_argparse().parse_args() 
 
     processor = cls_processors[args.task_name](args.data_dir, data_format=args.data_format)
 

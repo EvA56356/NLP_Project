@@ -42,13 +42,13 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
                                                 num_training_steps=t_total)
     # multi-gpu training (should be after apex fp16 initialization)
-    if args.n_gpu > 1:
-        model = torch.nn.DataParallel(model)
+    # if args.n_gpu > 1:
+    #     model = torch.nn.DataParallel(model)
     # Distributed training (should be after apex fp16 initialization)
-    if args.local_rank != -1:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
-                                                          output_device=args.local_rank,
-                                                          find_unused_parameters=True)
+    # if args.local_rank != -1:
+    #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
+    #                                                       output_device=args.local_rank,
+    #                                                       find_unused_parameters=True)
     # Train!
     logger.info("***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataset))
@@ -72,7 +72,7 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
     train_loss_list, train_acc_list = [], []
     dev_loss_list, dev_acc_list = [], []
     tmp_train_loss_list, tmp_train_acc_list = [], []
-    for _ in range(int(args.num_train_epochs)):
+    for epoch in range(int(args.num_train_epochs)):
         pbar = ProgressBar(n_total=len(train_dataloader), desc='Training')
         for step, batch in enumerate(train_dataloader):
             # Skip past any already trained steps if resuming training
@@ -90,10 +90,10 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
             # model outputs are always tuple in pytorch-transformers (see doc)
             outputs = model(**inputs)
             loss, logits = outputs
-            if args.n_gpu > 1:
-                loss = loss.mean()  # mean() to average on multi-gpu parallel training
-            if args.gradient_accumulation_steps > 1:
-                loss = loss / args.gradient_accumulation_steps
+            # if args.n_gpu > 1:
+            #     loss = loss.mean()  # mean() to average on multi-gpu parallel training
+            # if args.gradient_accumulation_steps > 1:
+            #     loss = loss / args.gradient_accumulation_steps
             if args.fp16:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
@@ -110,8 +110,9 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
                     torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
                 else:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                scheduler.step()  # Update learning rate schedule
+                 # Update learning rate schedule
                 optimizer.step()
+                scheduler.step() 
                 model.zero_grad()
                 global_step += 1
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
@@ -273,6 +274,7 @@ def main():
     args.output_dir = args.output_dir + '/{}'.format(args.model_type)
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
+
     time_ = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     init_logger(log_file=args.output_dir + f'/{args.model_type}-{args.task_name}-{time_}.log')
     if os.path.exists(args.output_dir) and os.listdir(
@@ -288,14 +290,16 @@ def main():
         ptvsd.enable_attach(address=(args.server_ip, args.server_port), redirect_output=True)
         ptvsd.wait_for_attach()
     # 设置cuda, gpu 并行
-    if args.local_rank == -1 or args.no_cuda:
-        device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-        args.n_gpu = torch.cuda.device_count()
-    else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-        torch.cuda.set_device(args.local_rank)
-        device = torch.device("cuda", args.local_rank)
-        torch.distributed.init_process_group(backend="nccl")
-        args.n_gpu = 1
+    # if args.local_rank == -1 or args.no_cuda:
+    #     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    #     args.n_gpu = torch.cuda.device_count()
+    # else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
+    #     torch.cuda.set_device(args.local_rank)
+    #     device = torch.device("cuda", args.local_rank)
+    #     torch.distributed.init_process_group(backend="nccl")
+    #     args.n_gpu = 1
+    device = torch.device("cpu")
+    args.n_gpu = 0
     args.device = device
     logger.warning(
         "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
@@ -315,8 +319,8 @@ def main():
     gram3_size = len(processor.gram3_dict)
 
     # 如果是多卡并行, 串行处理
-    if args.local_rank not in [-1, 0]:
-        torch.distributed.barrier()
+    # if args.local_rank not in [-1, 0]:
+    #     torch.distributed.barrier()
     # 加载预训练任务
     args.model_type = args.model_type.lower()
     # 由模型类别判断加载不同的模型
@@ -342,8 +346,8 @@ def main():
         print("model type error...")
         return
     # 第0张卡运行完再继续, 防止有需要下载的, 等第一张卡下载完再运行其他的卡, 不用重复下载
-    if args.local_rank == 0:
-        torch.distributed.barrier()
+    # if args.local_rank == 0:
+    #     torch.distributed.barrier()
 
     model.to(args.device)
     logger.info("Training/evaluation parameters %s", args)
