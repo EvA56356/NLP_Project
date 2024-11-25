@@ -7,7 +7,7 @@ def split_json_file(file_path, output_dir):
         data = json.load(f)
     
     total_lines = len(data)
-    max_lines = min(total_lines, 800)
+    max_lines = min(total_lines, 2100)
     
     split_80 = max_lines * 80 // 100
     split_10_validation = max_lines * 10 // 100
@@ -17,21 +17,21 @@ def split_json_file(file_path, output_dir):
     validation_data = data[split_80:split_80 + split_10_validation]
     training_data = data[split_80 + split_10_validation:split_80 + split_10_validation + split_10_training]
     
-    os.makedirs(f"{output_dir}/test", exist_ok=True)
-    os.makedirs(f"{output_dir}/validation", exist_ok=True)
     os.makedirs(f"{output_dir}/training", exist_ok=True)
+    os.makedirs(f"{output_dir}/test", exist_ok=True)
+    os.makedirs(f"{output_dir}/dev", exist_ok=True)
     
     filename = os.path.basename(file_path)
     
     print(f"Processing {filename} with {total_lines} total lines (processing up to {max_lines} lines)...")
     with tqdm(total=100, desc=f"Saving {filename}") as pbar:
-        with open(f"{output_dir}/test/{filename}", 'w') as f:
+        with open(f"{output_dir}/training/{filename}", 'w') as f:
             json.dump(test_data, f, indent=2)
         pbar.update(33)
-        with open(f"{output_dir}/validation/{filename}", 'w') as f:
+        with open(f"{output_dir}/test/{filename}", 'w') as f:
             json.dump(validation_data, f, indent=2)
         pbar.update(33)
-        with open(f"{output_dir}/training/{filename}", 'w') as f:
+        with open(f"{output_dir}/dev/{filename}", 'w') as f:
             json.dump(training_data, f, indent=2)
         pbar.update(34)
 
