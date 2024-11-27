@@ -12,8 +12,6 @@ import numpy as np
 import os
 import copy
 import joblib
-import xgboost as xgb
-
 
 def save_model(model, filename):
     joblib.dump(model, filename)

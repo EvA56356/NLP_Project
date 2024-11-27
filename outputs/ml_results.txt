@@ -1,0 +1,23 @@
+LR
+train loss: 0.24729355487461763, train acc: 0.9114324212271974, dev loss: 0.2615942243599439, dev acc: 0.8975214489990467
+test loss: 0.2692756309049273, test acc: 0.8985472731602763
+              precision    recall  f1-score   support
+
+           0       0.64      0.50      0.56       542
+           1       0.93      0.96      0.94      3657
+
+    accuracy                           0.90      4199
+   macro avg       0.78      0.73      0.75      4199
+weighted avg       0.89      0.90      0.89      4199
+
+SVM
+train loss: 0.4886045260255244, train acc: 0.9598621475953566, dev loss: 0.6221151313105593, dev acc: 0.8889418493803622
+test loss: 0.5925343640072759, test acc: 0.8890211955227435
+              precision    recall  f1-score   support
+
+           0       0.57      0.54      0.56       542
+           1       0.93      0.94      0.94      3657
+
+    accuracy                           0.89      4199
+   macro avg       0.75      0.74      0.75      4199
+weighted avg       0.89      0.89      0.89      4199

@@ -2,3 +2,7 @@ datasets/
 convert_dataset/
 outputs/cnn/
 outputs/lstm/ 
+outputs/lr/
+outputs/svm/
+tools/__pycache__
+processors/__pycache__
