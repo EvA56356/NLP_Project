@@ -43,16 +43,16 @@ class TextBiLSTM(nn.Module):
                                           total_length=batch_max_sentence_len)
         lstm_out = self.layer_norm(lstm_out)
         lstm_out = lstm_out * input_mask.float().unsqueeze(2)
-        if self.attention:
-            M = self.tanh1(lstm_out)  # [128, 32, 256]
-            alpha = F.softmax(torch.matmul(M, self.w), dim=1).unsqueeze(-1)  # [128, 32, 1]
-            out = lstm_out * alpha  # [128, 32, 256]
-            out = torch.sum(out, 1)  # [128, 256]
-            out = F.relu(out)
-            lstm_out_res = self.fc1(out)
-        else:
-            lstm_out_res = torch.mean(lstm_out, dim=1).squeeze()
-            lstm_out_res = self.lstm_dropout(lstm_out_res)
+        # if self.attention:
+        #     M = self.tanh1(lstm_out)  # [128, 32, 256]
+        #     alpha = F.softmax(torch.matmul(M, self.w), dim=1).unsqueeze(-1)  # [128, 32, 1]
+        #     out = lstm_out * alpha  # [128, 32, 256]
+        #     out = torch.sum(out, 1)  # [128, 256]
+        #     out = F.relu(out)
+        #     lstm_out_res = self.fc1(out)
+        # else:
+        lstm_out_res = torch.mean(lstm_out, dim=1).squeeze()
+        lstm_out_res = self.lstm_dropout(lstm_out_res)
         logits = self.classifier(lstm_out_res)
         loss = self.criterion(logits, target)
         return loss, logits

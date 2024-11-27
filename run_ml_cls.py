@@ -3,10 +3,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
-from processors.text_classify import WordsProcessor as cls_processors
+from processors.text_classify import WordsProcessor as processors
 from sklearn.metrics import accuracy_score, log_loss, classification_report, confusion_matrix
 from sklearn.model_selection import GridSearchCV, cross_val_score
-from tools.finetuning_argparse import get_argparse
+from tools.my_argparse import get_argparse
 from tqdm import tqdm
 import numpy as np
 import os
@@ -79,7 +79,7 @@ def test(args, X_test, test_labels):
 def main():
     args = get_argparse().parse_args() 
 
-    processor = cls_processors(args.data_dir)
+    processor = processors(args.data_dir)
 
     label_list, label2id, id2label = processor.get_labels()
 

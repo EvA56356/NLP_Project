@@ -6,3 +6,5 @@ outputs/lr/
 outputs/svm/
 tools/__pycache__
 processors/__pycache__
+losses/__pycache__
+models/__pycache__

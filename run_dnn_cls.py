@@ -11,14 +11,13 @@ from models import TextCNN, TextBiLSTM
 from processors.text_classify import convert_examples_to_features
 from processors.text_classify import WordsProcessor as processors
 from processors.text_classify import collate_fn
-from tools.finetuning_argparse import get_argparse
+from tools.my_argparse import get_argparse
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.metrics import roc_auc_score
 from tqdm import tqdm
 
 
 def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
-    """ Train the model """
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
     train_sampler = RandomSampler(train_dataset)
     collate_function = collate_fn
@@ -26,11 +25,11 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
                                   collate_fn=collate_function)
 
     t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
-    args.warmup_steps = int(t_total * args.warmup_proportion)
-    optimizer = AdamW(model.parameters(), lr=args.learning_rate, eps=args.adam_epsilon)
+    args.warmup_steps = int(t_total * 0.1)
+    optimizer = AdamW(model.parameters(), lr=args.learning_rate, eps=1e-8)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
                                                 num_training_steps=t_total)
-    # Train!
+
     print("***** Running training *****")
     print(f"  Num examples = {len(train_dataset)}")
     print(f"  Num Epochs = {args.num_train_epochs}")
@@ -68,15 +67,12 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
             tmp_train_loss_list.append(loss.item())
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                 # Update learning rate schedule
                 optimizer.step()
                 scheduler.step() 
                 model.zero_grad()
                 global_step += 1
                 if args.logging_steps > 0 and global_step % args.logging_steps == 0:
-                    # Log metrics
                     print(" ")
-                    # Only evaluate when single GPU otherwise metrics may not average well
                     dev_acc, dev_loss, dev_auc = evaluate(args, model, dev_dataset)
                     train_loss = np.mean(np.array(tmp_train_loss_list))
                     train_acc = np.mean(np.array(tmp_train_acc_list))
@@ -106,12 +102,11 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
 
 def evaluate(args, model, eval_dataset, flag=False):
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
-    # Note that DistributedSampler samples randomly
     eval_sampler = SequentialSampler(eval_dataset)
     collate_function = collate_fn
     eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size,
                                  collate_fn=collate_function)
-    # Eval!
+
     print("***** Running evaluation *****")
     print(f"  Num examples = {len(eval_dataset)}")
     print(f"  Batch size = {args.eval_batch_size}")
@@ -169,7 +164,7 @@ def test(args, model, dev_dataset):
     test_acc, test_loss, test_auc, test_report, test_confusion = evaluate(args, model, dev_dataset, flag=True)
     msg = 'Test Loss: {0:>5.2},  Test Acc: {1:>6.2%}, Test AUC: {2:>6.2f}'
     print(msg.format(test_loss, test_acc, test_auc))
-    print("Precision, Recall and F1-Score...")
+    print("Precision, Recall and F1-Score")
     print(test_report)
 
 
@@ -178,10 +173,9 @@ def load_and_cache_examples(args, processor, data_type='train'):
         max_length = args.train_max_seq_length
     else:
         max_length = args.eval_max_seq_length
-    cached_features_file = os.path.join(args.data_dir, 'cached_-{}_{}_{}'.format(
+    cached_features_file = os.path.join(args.data_dir, 'cached_-{}_{}'.format(
         data_type,
-        args.model_type,
-        str(max_length)))
+        args.model_type))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         print(f"Loading features from cached file {cached_features_file}")
         features = torch.load(cached_features_file)
@@ -200,7 +194,7 @@ def load_and_cache_examples(args, processor, data_type='train'):
         )
         print(f"Saving features into cached file {cached_features_file}")
         torch.save(features, cached_features_file)
-    # Convert to Tensors and build dataset
+
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
     all_label_ids = torch.tensor([f.label_idx for f in features], dtype=torch.long)
@@ -252,7 +246,6 @@ def main():
         return
 
     model.to(args.device)
-    # Training & Evaluate & Test/Predict
     if args.do_train:
         train_evaluate_test(args, train_dataset, eval_dataset, test_dataset, model)
         

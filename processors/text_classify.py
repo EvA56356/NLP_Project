@@ -99,10 +99,9 @@ def convert_examples_to_features(examples, max_seq_length, label2id, pad_token=0
 
 class WordsProcessor(DataProcessor, ABC):
     word_type = None
-    data_format = "json"
 
     def __init__(self, data_dir, word_type=True, ch_flag=True):
-        self.ch_flag = ch_flag
+        self.ch_flag = False
         self.word_type = word_type
         self.vocab_dict = {"[UNK]": 1, "[PAD]": 0}
         tmp_label_set = set()
@@ -122,9 +121,7 @@ class WordsProcessor(DataProcessor, ABC):
                 for line in fr:
                     self.label_list.append(line.strip())
         else:
-            self.label_list = list(tmp_label_set)
-            with open(label_file, 'w', encoding='utf-8') as fw:
-                fw.write("\n".join(self.label_list))
+            print("label.txt does not exist")
         self.id2label = {idx: label for idx, label in enumerate(self.label_list)}
         self.label2id = {label: idx for idx, label in enumerate(self.label_list)}
 
@@ -147,10 +144,10 @@ class WordsProcessor(DataProcessor, ABC):
             words = json_data['words']
             label = json_data['label']
             guid = "%s-%s" % (set_type, i)
-            if self.ch_flag:
-                text = words.replace(" ", "")
-            else:
-                text = words
+            # if self.ch_flag:
+            #     text = words.replace(" ", "")
+            # else:
+            text = words
             if self.word_type:
                 examples.append(InputExample(guid=guid, text_a=words, label=label))
             else:

@@ -26,8 +26,6 @@ class TextCNN(nn.Module):
         self.dropout = nn.Dropout(emb_dropout)
         self.classifier = nn.Linear(num_filters*len(filter_sizes), num_classes)
         assert loss_type in ['focal', 'ce']
-        # if loss_type == 'lsr':
-        #     self.criterion = LabelSmoothingCrossEntropy()
         if loss_type == 'ce':
             if weight is not None:
                 self.criterion = CrossEntropyLoss(weight=weight)
