@@ -1,38 +1,26 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss
 from losses.focal_loss import FocalLoss
 from losses.label_smoothing import LabelSmoothingCrossEntropy
 
 
 class TextCNN(nn.Module):
     def __init__(self, vocab_size, embedding_size, hidden_size, num_classes,
-                 num_filters=64, filter_sizes=(3, 4), emb_dropout=0.5, 
-                 pretrained_embedding=None, loss_type='ce', weight=None):
+                 num_filters=64, emb_dropout=0.5, 
+                 pretrained_embedding=None, weight=None):
         super(TextCNN, self).__init__()
         if pretrained_embedding is not None:
             self.embedding = nn.Embedding.from_pretrained(pretrained_embedding,
                                                           freeze=True)
         else:
             self.embedding = nn.Embedding(vocab_size, embedding_size)
-        self.emb_dropout = nn.Dropout(emb_dropout)
-        self.convs = nn.ModuleList(
-            [
-                nn.Conv2d(1, num_filters, (k, embedding_size))
-                for k in filter_sizes
-            ]
-        )
+        self.embedding_dropout = nn.Dropout(emb_dropout)
+        self.conv1 = nn.Conv2d(1, num_filters, (3, embedding_size))  
+        self.conv2 = nn.Conv2d(1, num_filters, (4, embedding_size)) 
         self.dropout = nn.Dropout(emb_dropout)
-        self.classifier = nn.Linear(num_filters*len(filter_sizes), num_classes)
-        assert loss_type in ['focal', 'ce']
-        if loss_type == 'ce':
-            if weight is not None:
-                self.criterion = CrossEntropyLoss(weight=weight)
-            else:
-                self.criterion = CrossEntropyLoss()
-        elif loss_type == "focal":
-            self.criterion = FocalLoss()
+        self.classifier = nn.Linear(num_filters*2, num_classes)
+        self.criterion = FocalLoss()
 
     def conv_and_pool(self, x, conv):
         x = F.relu(conv(x)).squeeze(3)
@@ -41,9 +29,12 @@ class TextCNN(nn.Module):
         return x
 
     def forward(self, input_ids, input_mask, target=None):
-        out = self.dropout(self.embedding(input_ids))
-        out = out.unsqueeze(1)
-        out = torch.cat([self.conv_and_pool(out, conv) for conv in self.convs], 1)
-        logits = self.classifier(out)
-        loss = self.criterion(logits, target)
+        x = self.embedding(input_ids)
+        x = self.embedding_dropout(x)
+        x = x.unsqueeze(1)
+        x1 = self.conv_and_pool(x, self.conv1)
+        x2 = self.conv_and_pool(x, self.conv2)
+        x = torch.cat([x1, x2], 1)
+        logits = self.classifier(x)
+        loss = self.criterion(logits, target) if target is not None else 0
         return loss, logits

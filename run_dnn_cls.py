@@ -176,7 +176,7 @@ def load_and_cache_examples(args, processor, data_type='train'):
     cached_features_file = os.path.join(args.data_dir, 'cached_-{}_{}'.format(
         data_type,
         args.model_type))
-    if os.path.exists(cached_features_file) and not args.overwrite_cache:
+    if os.path.exists(cached_features_file):
         print(f"Loading features from cached file {cached_features_file}")
         features = torch.load(cached_features_file)
     else:
@@ -212,11 +212,6 @@ def main():
         os.mkdir(args.output_dir)
 
     time_ = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    if os.path.exists(args.output_dir) and os.listdir(
-            args.output_dir) and args.do_train and not args.overwrite_output_dir:
-        raise ValueError(
-            "Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(
-                args.output_dir))
  
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = 1
@@ -236,10 +231,10 @@ def main():
 
     if args.model_type == 'cnn':
         weight = torch.Tensor([0.88, 0.12]).to(args.device)
-        model = TextCNN(vocab_size=vocab_size, embedding_size=256, hidden_size=256, num_filters=128, filter_sizes=(3, 4),
-                        loss_type=args.loss_type, num_classes=num_labels, weight=weight)
+        model = TextCNN(vocab_size=vocab_size, embedding_size=256, hidden_size=256, num_filters=128
+                        , num_classes=num_labels, weight=weight)
     elif args.model_type == "lstm":
-        model = TextBiLSTM(vocab_size=vocab_size, embedding_size=256, loss_type=args.loss_type,
+        model = TextBiLSTM(vocab_size=vocab_size, embedding_size=256,
                            hidden_size=256, num_classes=num_labels)
     else:
         print("model type error...")
