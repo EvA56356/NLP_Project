@@ -1,20 +1,7 @@
-# -*- coding:utf-8 -*-
-# File       : text_classify.py
-# Time       8/8/2023 下午 11:55
-# Author     ：rain
-# Description：
 import time
 
 
 class ProgressBar(object):
-    '''
-    custom progress bar
-    Example:
-        >>> pbar = ProgressBar(n_total=30,desc='training')
-        >>> step = 2
-        >>> pbar(step=step)
-    '''
-
     def __init__(self, n_total, width=30, desc='Training'):
         self.width = width
         self.n_total = n_total

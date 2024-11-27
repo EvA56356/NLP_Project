@@ -24,21 +24,10 @@ def load_model(filename):
 
 
 def train(args, X_train, X_dev, X_test, train_labels, dev_labels, test_labels):
-    if args.model_type == "dt":
-        # 决策树
-        clf = DecisionTreeClassifier()
-    elif args.model_type == "rf":
-        # 随机森林
-        clf = RandomForestClassifier(n_jobs=args.n_jobs)
-    elif args.model_type == "svm":
-        # SVM
+    if args.model_type == "svm":
         clf = LinearSVC()
-    elif args.model_type == "xgb":
-        # XGBoost
-        clf = xgb.XGBClassifier()
     elif args.model_type == "lr":
         clf = LogisticRegression()
-    # 训练模型
     clf.fit(X_train, train_labels)
     if hasattr(clf, "predict_proba"):
         y_train_pred_proba = clf.predict_proba(X_train)
@@ -58,7 +47,6 @@ def train(args, X_train, X_dev, X_test, train_labels, dev_labels, test_labels):
     y_dev_pred = clf.predict(X_dev)
     dev_acc = accuracy_score(dev_labels, y_dev_pred)
     print(f"train loss: {train_loss}, train acc: {train_acc}, dev loss: {dev_loss}, dev acc: {dev_acc}")
-    # 测试集打印分类报告与混淆矩阵
     y_pred = clf.predict(X_test)
     test_loss = log_loss(test_labels, y_test_pred_proba)
     test_acc = accuracy_score(test_labels, y_pred)
@@ -82,7 +70,6 @@ def test(args, X_test, test_labels):
     else:
         test_prob_pos = clf.decision_function(X_test)
         y_test_pred_proba = (test_prob_pos - test_prob_pos.min()) / (test_prob_pos.max() - test_prob_pos.min())
-    # 测试集打印分类报告与混淆矩阵
     y_pred = clf.predict(X_test)
     test_loss = log_loss(test_labels, y_test_pred_proba)
     test_acc = accuracy_score(test_labels, y_pred)
@@ -112,8 +99,8 @@ def main():
     test_labels = np.array([label2id[example.label] for example in test_examples])
     print("load datasets is finished...")
 
-    vectorizer = TfidfVectorizer()  # 实例一个模型
-    X_train = vectorizer.fit_transform(train_corpus).toarray()  # 把语料库传进去
+    vectorizer = TfidfVectorizer() 
+    X_train = vectorizer.fit_transform(train_corpus).toarray() 
     X_dev = vectorizer.transform(dev_corpus).toarray()
     X_test = vectorizer.transform(test_corpus).toarray()
     print("transform feature is finished...")

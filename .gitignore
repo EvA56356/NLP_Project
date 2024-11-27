@@ -1,2 +1,4 @@
-datasets/new_datasets
+datasets/
 convert_dataset/
+outputs/cnn/
+outputs/lstm/ 

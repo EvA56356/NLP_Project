@@ -27,11 +27,6 @@ def print_config(config):
 
 
 def init_logger(log_file=None, log_file_level=logging.NOTSET):
-    '''
-    Example:
-        >>> init_logger(log_file)
-        >>> logger.info("abc'")
-    '''
     if isinstance(log_file, Path):
         log_file = str(log_file)
     log_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
@@ -51,29 +46,16 @@ def init_logger(log_file=None, log_file_level=logging.NOTSET):
 
 
 def seed_everything(seed=1029):
-    '''
-    设置整个开发环境的seed
-    :param seed:
-    :param device:
-    :return:
-    '''
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    # some cudnn methods can be random even after fixing the seed
-    # unless you tell it to be deterministic
     torch.backends.cudnn.deterministic = True
 
 
 def prepare_device(n_gpu_use):
-    """
-    setup GPU device if available, move model into configured device
-    # 如果n_gpu_use为数字，则使用range生成list
-    # 如果输入的是一个list，则默认使用list[0]作为controller
-     """
     if not n_gpu_use:
         device_type = 'cpu'
     else:
@@ -93,13 +75,6 @@ def prepare_device(n_gpu_use):
 
 
 def model_device(n_gpu, model):
-    '''
-    判断环境 cpu还是gpu
-    支持单机多卡
-    :param n_gpu:
-    :param model:
-    :return:
-    '''
     device, device_ids = prepare_device(n_gpu)
     if len(device_ids) > 1:
         logger.info(f"current {len(device_ids)} GPUs")
@@ -111,15 +86,6 @@ def model_device(n_gpu, model):
 
 
 def restore_checkpoint(resume_path, model=None):
-    '''
-    加载模型
-    :param resume_path:
-    :param model:
-    :param optimizer:
-    :return:
-    注意： 如果是加载Bert模型的话，需要调整，不能使用该模式
-    可以使用模块自带的Bert_model.from_pretrained(state_dict = your save state_dict)
-    '''
     if isinstance(resume_path, Path):
         resume_path = str(resume_path)
     checkpoint = torch.load(resume_path)
@@ -134,13 +100,6 @@ def restore_checkpoint(resume_path, model=None):
 
 
 def save_pickle(data, file_path):
-    '''
-    保存成pickle文件
-    :param data:
-    :param file_name:
-    :param pickle_path:
-    :return:
-    '''
     if isinstance(file_path, Path):
         file_path = str(file_path)
     with open(file_path, 'wb') as f:
@@ -148,63 +107,31 @@ def save_pickle(data, file_path):
 
 
 def load_pickle(input_file):
-    '''
-    读取pickle文件
-    :param pickle_path:
-    :param file_name:
-    :return:
-    '''
     with open(str(input_file), 'rb') as f:
         data = pickle.load(f)
     return data
 
 
 def save_json(data, file_path):
-    '''
-    保存成json文件
-    :param data:
-    :param json_path:
-    :param file_name:
-    :return:
-    '''
     if not isinstance(file_path, Path):
         file_path = Path(file_path)
-    # if isinstance(data,dict):
-    #     data = json.dumps(data)
     with open(str(file_path), 'w') as f:
         json.dump(data, f)
 
 
 def save_numpy(data, file_path):
-    '''
-    保存成.npy文件
-    :param data:
-    :param file_path:
-    :return:
-    '''
     if not isinstance(file_path, Path):
         file_path = Path(file_path)
     np.save(str(file_path), data)
 
 
 def load_numpy(file_path):
-    '''
-    加载.npy文件
-    :param file_path:
-    :return:
-    '''
     if not isinstance(file_path, Path):
         file_path = Path(file_path)
     np.load(str(file_path))
 
 
 def load_json(file_path):
-    '''
-    加载json文件
-    :param json_path:
-    :param file_name:
-    :return:
-    '''
     if not isinstance(file_path, Path):
         file_path = Path(file_path)
     with open(str(file_path), 'r') as f:
@@ -213,12 +140,6 @@ def load_json(file_path):
 
 
 def json_to_text(file_path, data):
-    '''
-    将json list写入text文件中
-    :param file_path:
-    :param data:
-    :return:
-    '''
     if not isinstance(file_path, Path):
         file_path = Path(file_path)
     with open(str(file_path), 'w') as fw:
@@ -228,12 +149,6 @@ def json_to_text(file_path, data):
 
 
 def save_model(model, model_path):
-    """ 存储不含有显卡信息的state_dict或model
-    :param model:
-    :param model_name:
-    :param only_param:
-    :return:
-    """
     if isinstance(model_path, Path):
         model_path = str(model_path)
     if isinstance(model, nn.DataParallel):
@@ -245,14 +160,6 @@ def save_model(model, model_path):
 
 
 def load_model(model, model_path):
-    '''
-    加载模型
-    :param model:
-    :param model_name:
-    :param model_path:
-    :param only_param:
-    :return:
-    '''
     if isinstance(model_path, Path):
         model_path = str(model_path)
     logging.info(f"loading model from {str(model_path)} .")
@@ -266,17 +173,6 @@ def load_model(model, model_path):
 
 
 class AverageMeter(object):
-    '''
-    computes and stores the average and current value
-    Example:
-        >>> loss = AverageMeter()
-        >>> for step,batch in enumerate(train_data):
-        >>>     pred = self.model(batch)
-        >>>     raw_loss = self.metrics(pred,target)
-        >>>     loss.update(raw_loss.item(),n = 1)
-        >>> cur_loss = loss.avg
-    '''
-
     def __init__(self):
         self.reset()
 
@@ -293,124 +189,27 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def summary(model, *inputs, batch_size=-1, show_input=True):
-    '''
-    打印模型结构信息
-    :param model:
-    :param inputs:
-    :param batch_size:
-    :param show_input:
-    :return:
-    Example:
-        >>> print("model summary info: ")
-        >>> for step,batch in enumerate(train_data):
-        >>>     summary(self.model,*batch,show_input=True)
-        >>>     break
-    '''
-
-    def register_hook(module):
-        def hook(module, input, output=None):
-            class_name = str(module.__class__).split(".")[-1].split("'")[0]
-            module_idx = len(summary)
-
-            m_key = f"{class_name}-{module_idx + 1}"
-            summary[m_key] = OrderedDict()
-            summary[m_key]["input_shape"] = list(input[0].size())
-            summary[m_key]["input_shape"][0] = batch_size
-
-            if show_input is False and output is not None:
-                if isinstance(output, (list, tuple)):
-                    for out in output:
-                        if isinstance(out, torch.Tensor):
-                            summary[m_key]["output_shape"] = [
-                                [-1] + list(out.size())[1:]
-                            ][0]
-                        else:
-                            summary[m_key]["output_shape"] = [
-                                [-1] + list(out[0].size())[1:]
-                            ][0]
-                else:
-                    summary[m_key]["output_shape"] = list(output.size())
-                    summary[m_key]["output_shape"][0] = batch_size
-
-            params = 0
-            if hasattr(module, "weight") and hasattr(module.weight, "size"):
-                params += torch.prod(torch.LongTensor(list(module.weight.size())))
-                summary[m_key]["trainable"] = module.weight.requires_grad
-            if hasattr(module, "bias") and hasattr(module.bias, "size"):
-                params += torch.prod(torch.LongTensor(list(module.bias.size())))
-            summary[m_key]["nb_params"] = params
-
-        if (not isinstance(module, nn.Sequential) and not isinstance(module, nn.ModuleList) and not (module == model)):
-            if show_input is True:
-                hooks.append(module.register_forward_pre_hook(hook))
-            else:
-                hooks.append(module.register_forward_hook(hook))
-
-    # create properties
-    summary = OrderedDict()
-    hooks = []
-
-    # register hook
-    model.apply(register_hook)
-    model(*inputs)
-
-    # remove these hooks
-    for h in hooks:
-        h.remove()
-
-    print("-----------------------------------------------------------------------")
-    if show_input is True:
-        line_new = f"{'Layer (type)':>25}  {'Input Shape':>25} {'Param #':>15}"
-    else:
-        line_new = f"{'Layer (type)':>25}  {'Output Shape':>25} {'Param #':>15}"
-    print(line_new)
-    print("=======================================================================")
-
-    total_params = 0
-    total_output = 0
-    trainable_params = 0
-    for layer in summary:
-        # input_shape, output_shape, trainable, nb_params
-        if show_input is True:
-            line_new = "{:>25}  {:>25} {:>15}".format(
-                layer,
-                str(summary[layer]["input_shape"]),
-                "{0:,}".format(summary[layer]["nb_params"]),
-            )
-        else:
-            line_new = "{:>25}  {:>25} {:>15}".format(
-                layer,
-                str(summary[layer]["output_shape"]),
-                "{0:,}".format(summary[layer]["nb_params"]),
-            )
-
-        total_params += summary[layer]["nb_params"]
-        if show_input is True:
-            total_output += np.prod(summary[layer]["input_shape"])
-        else:
-            total_output += np.prod(summary[layer]["output_shape"])
-        if "trainable" in summary[layer]:
-            if summary[layer]["trainable"] == True:
-                trainable_params += summary[layer]["nb_params"]
-
-        print(line_new)
-
-    print("=======================================================================")
-    print(f"Total params: {total_params:0,}")
-    print(f"Trainable params: {trainable_params:0,}")
-    print(f"Non-trainable params: {(total_params - trainable_params):0,}")
-    print("-----------------------------------------------------------------------")
-
-
 def plot_img_acc_loss(train_ds, dev_ds, img_type, model_type):
-    # 绘制训练集和测试集的loss与acc曲线
     plt.figure(figsize=(10, 5))
     plt.plot(range(1, len(train_ds) + 1), train_ds, label=f'Train {img_type}')
     plt.plot(range(1, len(dev_ds) + 1), dev_ds, label=f'Test {img_type}')
-    plt.xlabel('Step')
+    plt.xlabel('Epoch')
     plt.ylabel(f'{img_type}')
-    plt.title(f'Batch-{img_type} Curve')
+    plt.title(f'{img_type} Curve for {model_type}')
     plt.legend()
     plt.savefig(f'outputs/{model_type}_{img_type}.png')
-    # plt.show()
+
+
+def plot_img_auc(auc, model_type):
+    plt.figure(figsize=(10, 5))
+    
+    plt.plot(range(1, len(auc) + 1), auc, label='Val AUC', color='orange', linestyle='-', marker='o')
+    
+    plt.xlabel('Epochs')
+    plt.ylabel('AUC')
+    plt.title(f'AUC Curve for {model_type}')
+    
+    plt.legend()
+    
+    plt.savefig(f'outputs/{model_type}_auc_curve.png')
+

@@ -1,8 +1,3 @@
-# -*- coding:utf-8 -*-
-# File       : text_classify.py
-# Time       : 8/8/2023 下午 11:55
-# Author     ：rain
-# Description：
 import argparse
 
 
@@ -26,7 +21,7 @@ def get_argparse():
     parser.add_argument("--pretrained_weight", default=None, type=str, 
                         help="Path to pre-trained word2vec weight file.")
     parser.add_argument('--loss_type', default='ce', type=str,
-                        choices=['lsr', 'focal', 'ce'])
+                        choices=['focal', 'ce'])
     parser.add_argument("--config_name", default="", type=str,
                         help="Pretrained config name or path if not the same as model_name")
     parser.add_argument("--tokenizer_name", default="", type=str,
@@ -53,14 +48,6 @@ def get_argparse():
                         help="Whether to run evaluation during training at each logging step.", )
     parser.add_argument("--do_lower_case", action="store_true",
                         help="Set this flag if you are using an uncased model.")
-    # adversarial training
-    parser.add_argument("--do_adv", action="store_true",
-                        help="Whether to adversarial training.")
-    parser.add_argument('--adv_epsilon', default=1.0, type=float,
-                        help="Epsilon for adversarial.")
-    parser.add_argument('--adv_name', default='word_embeddings', type=str,
-                        help="name for adversarial layer.")
-
     parser.add_argument("--n_jobs", default=4, type=int,
                         help="using multi cpu for ml training.")
     parser.add_argument("--per_gpu_train_batch_size", default=8, type=int,
@@ -73,8 +60,6 @@ def get_argparse():
                         help="The initial learning rate for Adam.")
     parser.add_argument("--weight_decay", default=0.01, type=float,
                         help="Weight decay if we apply some.")
-    parser.add_argument("--adam_epsilon", default=1e-8, type=float,
-                        help="Epsilon for Adam optimizer.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float,
                         help="Max gradient norm.")
     parser.add_argument("--num_train_epochs", default=3, type=int,
@@ -97,12 +82,6 @@ def get_argparse():
     parser.add_argument("--overwrite_cache", action="store_true",
                         help="Overwrite the cached training and evaluation sets")
     parser.add_argument("--seed", type=int, default=42, help="random seed for initialization")
-    parser.add_argument("--fp16", action="store_true",
-                        help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit", )
-    parser.add_argument("--fp16_opt_level", type=str, default="O1",
-                        help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
-                             "See details at https://nvidia.github.io/apex/amp.html", )
-    parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
-    parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
-    parser.add_argument("--server_port", type=str, default="", help="For distant debugging.")
+    parser.add_argument("--adam_epsilon", default=1e-8, type=float,
+                        help="Epsilon for Adam optimizer.")
     return parser

@@ -1,8 +1,3 @@
-# -*- coding:utf-8 -*-
-# File       : text_bilstm.py
-# Time       ：12/8/2023 下午 11:13
-# Author     ：rain
-# Description：Text分类 BILSTM网络结构
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,7 +8,7 @@ from losses.label_smoothing import LabelSmoothingCrossEntropy
 
 class TextCNN(nn.Module):
     def __init__(self, vocab_size, embedding_size, hidden_size, num_classes,
-                 num_filters=256, filter_sizes=(3, 4, 5), emb_dropout=0.5, 
+                 num_filters=64, filter_sizes=(3, 4), emb_dropout=0.5, 
                  pretrained_embedding=None, loss_type='ce', weight=None):
         super(TextCNN, self).__init__()
         if pretrained_embedding is not None:
@@ -30,10 +25,10 @@ class TextCNN(nn.Module):
         )
         self.dropout = nn.Dropout(emb_dropout)
         self.classifier = nn.Linear(num_filters*len(filter_sizes), num_classes)
-        assert loss_type in ['lsr', 'focal', 'ce']
-        if loss_type == 'lsr':
-            self.criterion = LabelSmoothingCrossEntropy()
-        elif loss_type == 'ce':
+        assert loss_type in ['focal', 'ce']
+        # if loss_type == 'lsr':
+        #     self.criterion = LabelSmoothingCrossEntropy()
+        if loss_type == 'ce':
             if weight is not None:
                 self.criterion = CrossEntropyLoss(weight=weight)
             else:
@@ -51,7 +46,6 @@ class TextCNN(nn.Module):
         out = self.dropout(self.embedding(input_ids))
         out = out.unsqueeze(1)
         out = torch.cat([self.conv_and_pool(out, conv) for conv in self.convs], 1)
-        # out = self.dropout(out)
         logits = self.classifier(out)
         loss = self.criterion(logits, target)
         return loss, logits

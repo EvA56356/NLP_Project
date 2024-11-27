@@ -1,8 +1,3 @@
-# -*- coding:utf-8 -*-
-# File       : text_classify.py
-# Time       ：12/8/2023 下午 11:17
-# Author     ：rain
-# Description：
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
