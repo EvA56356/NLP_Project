@@ -24,11 +24,8 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
     collate_function = collate_fn
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size,
                                   collate_fn=collate_function)
-    if args.max_steps > 0:
-        t_total = args.max_steps
-        args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
-    else:
-        t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
+
+    t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
     args.warmup_steps = int(t_total * args.warmup_proportion)
     optimizer = AdamW(model.parameters(), lr=args.learning_rate, eps=args.adam_epsilon)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
@@ -137,11 +134,6 @@ def evaluate(args, model, eval_dataset, flag=False):
         with torch.no_grad():
             inputs = {"input_ids": batch[0], "input_mask": batch[1],
                       "target": batch[2]}
-            # if args.model_type == "fasttext":
-            #     # XLM and RoBERTa don"t use segment_ids
-            #     inputs["gram2_ids"] = batch[4]
-            #     inputs["gram3_ids"] = batch[5]
-            # model outputs are always tuple in pytorch-transformers (see doc)
             outputs = model(**inputs)
             tmp_eval_loss, logits = outputs[:2]
 
@@ -152,8 +144,6 @@ def evaluate(args, model, eval_dataset, flag=False):
             predict_all = np.append(predict_all, batch_preds)
 
             all_probs.append(probs)
-        # if args.n_gpu > 1:
-        #     tmp_eval_loss = tmp_eval_loss.mean()  # mean() to average on multi-gpu parallel evaluating
         eval_loss += tmp_eval_loss.item()
         nb_eval_steps += 1
         pbar(step)
@@ -176,7 +166,6 @@ def evaluate(args, model, eval_dataset, flag=False):
 
 
 def test(args, model, dev_dataset):
-    # test
     save_path = os.path.join(args.output_dir, f"{args.model_type}.ckpt")
     model.load_state_dict(torch.load(save_path))
     model.eval()
@@ -185,8 +174,6 @@ def test(args, model, dev_dataset):
     print(msg.format(test_loss, test_acc, test_auc))
     print("Precision, Recall and F1-Score...")
     print(test_report)
-    # print("Confusion Matrix...")
-    # print(test_confusion)
 
 
 def load_and_cache_examples(args, processor, data_type='train'):
@@ -195,7 +182,6 @@ def load_and_cache_examples(args, processor, data_type='train'):
         max_length = args.train_max_seq_length
     else:
         max_length = args.eval_max_seq_length
-    # 加载数据并保存为缓存文件
     cached_features_file = os.path.join(args.data_dir, 'cached_-{}_{}_{}_{}'.format(
         data_type,
         args.model_type,
@@ -213,13 +199,6 @@ def load_and_cache_examples(args, processor, data_type='train'):
             examples = processor.get_dev_examples(args.data_dir)
         else:
             examples = processor.get_test_examples(args.data_dir)
-        # if args.model_type == 'fasttext':
-        #     features = convert_fasttext_features(
-        #         examples=examples, label2id=args.label2id,
-        #         max_seq_length=max_length, vocab_dict=processor.vocab_dict,
-        #         gram2_dict=processor.gram2_dict, gram3_dict=processor.gram3_dict
-        #     )
-        # else:
         features = convert_examples_to_features(
             examples=examples, label2id=args.label2id,
             max_seq_length=max_length, vocab_dict=processor.vocab_dict
@@ -231,19 +210,12 @@ def load_and_cache_examples(args, processor, data_type='train'):
     all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
     all_label_ids = torch.tensor([f.label_idx for f in features], dtype=torch.long)
     all_lens = torch.tensor([f.input_len for f in features], dtype=torch.long)
-    # if args.model_type == "fasttext":
-    #     all_gram2_ids = torch.tensor([f.gram2_ids for f in features], dtype=torch.long)
-    #     all_gram3_ids = torch.tensor([f.gram3_ids for f in features], dtype=torch.long)
-    #     dataset = TensorDataset(all_input_ids, all_input_mask, 
-    #                             all_lens, all_label_ids, all_gram2_ids, all_gram3_ids)
-    # else:
     dataset = TensorDataset(all_input_ids, all_input_mask, all_lens, all_label_ids)
     return dataset
 
 
 def main():
-    args = get_argparse().parse_args()    # 训练输入参数处理, 需要新增/修改参数可以进入get_argparse配置
-    # 模型保存/日志
+    args = get_argparse().parse_args() 
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
     args.output_dir = args.output_dir + '/{}'.format(args.model_type)
@@ -257,7 +229,6 @@ def main():
         raise ValueError(
             "Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(
                 args.output_dir))
-    # 设置debug
     print("-----------------------------------------------")
     print(torch.cuda.is_available())
     print("-----------------------------------------------")
@@ -268,9 +239,7 @@ def main():
     logger.warning(
         "Device: %s, n_gpu: %s",
         device, args.n_gpu)
-    # Set seed
     seed_everything(args.seed)
-    # emotion 任务, 用任务名确认数据处理器
     args.task_name = args.task_name.lower()
     if args.task_name not in processors:
         raise ValueError("Task not found: %s" % (args.task_name))
@@ -280,9 +249,7 @@ def main():
     num_labels = len(args.label2id)
     vocab_size = len(processor.vocab_dict)
 
-    # 加载预训练任务
     args.model_type = args.model_type.lower()
-    # 由模型类别判断加载不同的模型
 
     train_dataset = load_and_cache_examples(args, processor, data_type='train')
     eval_dataset = load_and_cache_examples(args, processor, data_type='eval')
@@ -290,9 +257,7 @@ def main():
 
     if args.model_type == 'cnn':
         weight = torch.Tensor([0.88, 0.12]).to(args.device)
-        model = TextCNN(vocab_size=vocab_size, embedding_size=256, hidden_size=256,
-                        loss_type=args.loss_type, num_classes=num_labels, weight=weight)
-        model = TextCNN(vocab_size=vocab_size, embedding_size=256, hidden_size=256, num_filters=64, filter_sizes=(3, 4),
+        model = TextCNN(vocab_size=vocab_size, embedding_size=256, hidden_size=256, num_filters=128, filter_sizes=(3, 4),
                         loss_type=args.loss_type, num_classes=num_labels, weight=weight)
     elif args.model_type == "lstm":
         model = TextBiLSTM(vocab_size=vocab_size, embedding_size=256, loss_type=args.loss_type,
