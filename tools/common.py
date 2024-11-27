@@ -1,21 +1,13 @@
-# -*- coding:utf-8 -*-
-# File       : text_classify.py
-# Time       8/8/2023 下午 11:55
-# Author     ：rain
-# Description：
 import os
 import random
 import torch
 import numpy as np
 import json
 import pickle
-import logging
 import torch.nn as nn
 from collections import OrderedDict
 from pathlib import Path
 import matplotlib.pyplot as plt
-
-logger = logging.getLogger()
 
 
 def print_config(config):
@@ -24,25 +16,6 @@ def print_config(config):
         info += f"\t{k} : {str(v)}\n"
     print("\n" + info + "\n")
     return
-
-
-def init_logger(log_file=None, log_file_level=logging.NOTSET):
-    if isinstance(log_file, Path):
-        log_file = str(log_file)
-    log_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                                   datefmt='%m/%d/%Y %H:%M:%S')
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    logger.handlers = [console_handler]
-    if log_file and log_file != '':
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(log_file_level)
-        # file_handler.setFormatter(log_format)
-        logger.addHandler(file_handler)
-    return logger
 
 
 def seed_everything(seed=1029):
@@ -63,11 +36,11 @@ def prepare_device(n_gpu_use):
         device_type = f"cuda:{n_gpu_use[0]}"
     n_gpu = torch.cuda.device_count()
     if len(n_gpu_use) > 0 and n_gpu == 0:
-        logger.warning("Warning: There\'s no GPU available on this machine, training will be performed on CPU.")
+        print("Warning: There\'s no GPU available on this machine, training will be performed on CPU.")
         device_type = 'cpu'
     if len(n_gpu_use) > n_gpu:
         msg = f"Warning: The number of GPU\'s configured to use is {n_gpu_use}, but only {n_gpu} are available on this machine."
-        logger.warning(msg)
+        print(msg)
         n_gpu_use = range(n_gpu)
     device = torch.device(device_type)
     list_ids = n_gpu_use
@@ -77,7 +50,7 @@ def prepare_device(n_gpu_use):
 def model_device(n_gpu, model):
     device, device_ids = prepare_device(n_gpu)
     if len(device_ids) > 1:
-        logger.info(f"current {len(device_ids)} GPUs")
+        print(f"current {len(device_ids)} GPUs")
         model = torch.nn.DataParallel(model, device_ids=device_ids)
     if len(device_ids) == 1:
         os.environ['CUDA_VISIBLE_DEVICES'] = str(device_ids[0])
@@ -162,7 +135,7 @@ def save_model(model, model_path):
 def load_model(model, model_path):
     if isinstance(model_path, Path):
         model_path = str(model_path)
-    logging.info(f"loading model from {str(model_path)} .")
+    print(f"loading model from {str(model_path)} .")
     states = torch.load(model_path)
     state = states['state_dict']
     if isinstance(model, nn.DataParallel):
@@ -212,4 +185,3 @@ def plot_img_auc(auc, model_type):
     plt.legend()
     
     plt.savefig(f'outputs/{model_type}_auc_curve.png')
-

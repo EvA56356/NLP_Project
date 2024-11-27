@@ -4,8 +4,6 @@ import argparse
 def get_argparse():
     parser = argparse.ArgumentParser()
     # Required parameters
-    parser.add_argument("--task_name", default=None, type=str, required=True,
-                        help="The name of the task to train selected in the list: ")
     parser.add_argument("--data_dir", default=None, type=str, required=True,
                         help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.", )
     parser.add_argument("--model_type", default=None, type=str, required=True,
@@ -26,8 +24,6 @@ def get_argparse():
                         help="Pretrained config name or path if not the same as model_name")
     parser.add_argument("--tokenizer_name", default="", type=str,
                         help="Pretrained tokenizer name or path if not the same as model_name", )
-    parser.add_argument("--data_format", default="", type=str,
-                        help="data file format, json or label_table_words, words_table_label", )
     parser.add_argument("--word_type", default=False, type=bool,
                         help="if True using word else using character.")
     parser.add_argument("--cache_dir", default="", type=str,
@@ -64,19 +60,15 @@ def get_argparse():
                         help="Max gradient norm.")
     parser.add_argument("--num_train_epochs", default=3, type=int,
                         help="Total number of training epochs to perform.")
-    parser.add_argument("--max_steps", default=-1, type=int,
-                        help="If > 0: set total number of training steps to perform. Override num_train_epochs.", )
 
     parser.add_argument("--warmup_proportion", default=0.1, type=float,
                         help="Proportion of training to perform linear learning rate warmup for,E.g., 0.1 = 10% of training.")
     parser.add_argument("--logging_steps", type=int, default=50,
                         help="Log every X updates steps.")
-    parser.add_argument("--save_steps", type=int, default=50, help="Save checkpoint every X updates steps.")
     parser.add_argument("--eval_all_checkpoints", action="store_true",
                         help="Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number", )
     parser.add_argument("--predict_checkpoints",type=int, default=0,
                         help="predict checkpoints starting with the same prefix as model_name ending and ending with step number")
-    parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
     parser.add_argument("--overwrite_output_dir", action="store_true",
                         help="Overwrite the content of the output directory")
     parser.add_argument("--overwrite_cache", action="store_true",

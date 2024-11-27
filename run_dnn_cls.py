@@ -6,15 +6,15 @@ import numpy as np
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
-from tools.progressbar import ProgressBar
-from tools.common import seed_everything, init_logger, logger, plot_img_acc_loss, plot_img_auc
+from tools.common import seed_everything, plot_img_acc_loss, plot_img_auc
 from models import TextCNN, TextBiLSTM
 from processors.text_classify import convert_examples_to_features
-from processors.text_classify import cls_processors as processors
+from processors.text_classify import WordsProcessor as processors
 from processors.text_classify import collate_fn
 from tools.finetuning_argparse import get_argparse
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.metrics import roc_auc_score
+from tqdm import tqdm
 
 
 def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
@@ -31,16 +31,12 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
                                                 num_training_steps=t_total)
     # Train!
-    logger.info("***** Running training *****")
-    logger.info("  Num examples = %d", len(train_dataset))
-    logger.info("  Num Epochs = %d", args.num_train_epochs)
-    logger.info("  Instantaneous batch size per GPU = %d", args.per_gpu_train_batch_size)
-    logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                args.train_batch_size
-                * args.gradient_accumulation_steps,
-                )
-    logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
-    logger.info("  Total optimization steps = %d", t_total)
+    print("***** Running training *****")
+    print(f"  Num examples = {len(train_dataset)}")
+    print(f"  Num Epochs = {args.num_train_epochs}")
+    print(f"  Batch size = {args.per_gpu_train_batch_size}")
+    print(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
+    print(f"  Total optimization steps = {t_total}")
 
     global_step = 0
     steps_trained_in_current_epoch = 0
@@ -52,9 +48,8 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
     dev_loss_list, dev_acc_list, dev_auc_list = [], [], []
     tmp_train_loss_list, tmp_train_acc_list = [], []
     for epoch in range(int(args.num_train_epochs)):
-        pbar = ProgressBar(n_total=len(train_dataloader), desc='Training')
+        progress = tqdm(train_dataloader, desc=f"Training Epoch {epoch + 1}", total=len(train_dataloader))
         for step, batch in enumerate(train_dataloader):
-            # Skip past any already trained steps if resuming training
             if steps_trained_in_current_epoch > 0:
                 steps_trained_in_current_epoch -= 1
                 continue
@@ -65,7 +60,7 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
             outputs = model(**inputs)
             loss, logits = outputs
             loss.backward()
-            pbar(step, {'loss': loss.item()})
+            progress.set_postfix(loss=loss.item())
             tr_loss += loss.item()
             predict_all = torch.max(logits, 1)[1].cpu().numpy()
             train_acc = accuracy_score(batch[2].cpu(), predict_all)
@@ -98,8 +93,9 @@ def train_evaluate_test(args, train_dataset, dev_dataset, test_dataset, model):
                         dev_best_acc = dev_acc
                         save_path = os.path.join(args.output_dir, f"{args.model_type}.ckpt")
                         torch.save(model.state_dict(), save_path)
-                        logger.info("Saving model to %s", save_path)
-        logger.info("\n")
+                        print(f"Saving model to {save_path}")
+                progress.update(1)
+        print("\n")
         if 'cuda' in str(args.device):
             torch.cuda.empty_cache()
     plot_img_acc_loss(train_loss_list, dev_loss_list, "Loss", args.model_type)
@@ -116,12 +112,12 @@ def evaluate(args, model, eval_dataset, flag=False):
     eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size,
                                  collate_fn=collate_function)
     # Eval!
-    logger.info("***** Running evaluation %s *****")
-    logger.info("  Num examples = %d", len(eval_dataset))
-    logger.info("  Batch size = %d", args.eval_batch_size)
+    print("***** Running evaluation *****")
+    print(f"  Num examples = {len(eval_dataset)}")
+    print(f"  Batch size = {args.eval_batch_size}")
     eval_loss = 0.0
     nb_eval_steps = 0
-    pbar = ProgressBar(n_total=len(eval_dataloader), desc="Evaluating")
+    progress = tqdm(eval_dataloader, desc="Evaluating", total=len(eval_dataloader))
     if isinstance(model, nn.DataParallel):
         model = model.module
     predict_all = np.array([], dtype=int)
@@ -146,14 +142,15 @@ def evaluate(args, model, eval_dataset, flag=False):
             all_probs.append(probs)
         eval_loss += tmp_eval_loss.item()
         nb_eval_steps += 1
-        pbar(step)
+        progress.set_postfix(eval_loss=eval_loss / (nb_eval_steps + 1))
+        progress.update(1)
 
     all_probs = np.concatenate(all_probs, axis=0)
     try:
         auc = roc_auc_score(labels_all, all_probs[:, 1], multi_class='ovr', average='macro')
     except ValueError:
         auc = 0.0
-        logger.warning("AUC computation failed. It may be due to class imbalance or insufficient samples.")
+        print("AUC computation failed. It may be due to class imbalance or insufficient samples.")
 
 
     dev_acc = accuracy_score(labels_all, predict_all)
@@ -177,21 +174,19 @@ def test(args, model, dev_dataset):
 
 
 def load_and_cache_examples(args, processor, data_type='train'):
-    task = args.task_name
     if data_type == 'train':
         max_length = args.train_max_seq_length
     else:
         max_length = args.eval_max_seq_length
-    cached_features_file = os.path.join(args.data_dir, 'cached_-{}_{}_{}_{}'.format(
+    cached_features_file = os.path.join(args.data_dir, 'cached_-{}_{}_{}'.format(
         data_type,
         args.model_type,
-        str(max_length),
-        str(task)))
+        str(max_length)))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
-        logger.info("Loading features from cached file %s", cached_features_file)
+        print(f"Loading features from cached file {cached_features_file}")
         features = torch.load(cached_features_file)
     else:
-        logger.info("Creating features from dataset file at %s", args.data_dir)
+        print(f"Creating features from dataset file at {args.data_dir}")
         label_list = processor.get_labels()
         if data_type == 'train':
             examples = processor.get_train_examples(args.data_dir)
@@ -203,7 +198,7 @@ def load_and_cache_examples(args, processor, data_type='train'):
             examples=examples, label2id=args.label2id,
             max_seq_length=max_length, vocab_dict=processor.vocab_dict
         )
-        logger.info("Saving features into cached file %s", cached_features_file)
+        print(f"Saving features into cached file {cached_features_file}")
         torch.save(features, cached_features_file)
     # Convert to Tensors and build dataset
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
@@ -223,28 +218,18 @@ def main():
         os.mkdir(args.output_dir)
 
     time_ = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    init_logger(log_file=args.output_dir + f'/{args.model_type}-{args.task_name}-{time_}.log')
     if os.path.exists(args.output_dir) and os.listdir(
             args.output_dir) and args.do_train and not args.overwrite_output_dir:
         raise ValueError(
             "Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(
                 args.output_dir))
-    print("-----------------------------------------------")
-    print(torch.cuda.is_available())
-    print("-----------------------------------------------")
  
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = 1
     args.device = device
-    logger.warning(
-        "Device: %s, n_gpu: %s",
-        device, args.n_gpu)
+    print(f"Device: {device}, n_gpu: {args.n_gpu}")
     seed_everything(args.seed)
-    args.task_name = args.task_name.lower()
-    if args.task_name not in processors:
-        raise ValueError("Task not found: %s" % (args.task_name))
-    processor = processors[args.task_name](args.data_dir, word_type=args.word_type,
-                                           data_format=args.data_format)
+    processor = processors(args.data_dir, word_type=args.word_type)
     args.label_list, args.label2id, args.id2label = processor.get_labels()
     num_labels = len(args.label2id)
     vocab_size = len(processor.vocab_dict)
@@ -267,7 +252,6 @@ def main():
         return
 
     model.to(args.device)
-    logger.info("Training/evaluation parameters %s", args)
     # Training & Evaluate & Test/Predict
     if args.do_train:
         train_evaluate_test(args, train_dataset, eval_dataset, test_dataset, model)
