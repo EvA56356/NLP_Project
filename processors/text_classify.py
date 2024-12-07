@@ -105,7 +105,7 @@ class WordsProcessor(DataProcessor, ABC):
         self.word_type = word_type
         self.vocab_dict = {"UNKNOWN": 1, "PADDING": 0}
         tmp_label_set = set()
-        with open(f"{data_dir}/pre-train.txt", "r", encoding="utf-8") as fr:
+        with open(f"{data_dir}/train.txt", "r", encoding="utf-8") as fr:
             for line in fr:
                 json_data = json.loads(line.strip())
                 word_list = json_data['words'].split()
@@ -126,7 +126,7 @@ class WordsProcessor(DataProcessor, ABC):
         self.label2id = {label: idx for idx, label in enumerate(self.label_list)}
 
     def get_train_examples(self, data_dir):
-        return self._create_examples(self._read_text(os.path.join(data_dir, "pre-train.txt")), "train")
+        return self._create_examples(self._read_text(os.path.join(data_dir, "train.txt")), "train")
 
     def get_dev_examples(self, data_dir):
         return self._create_examples(self._read_text(os.path.join(data_dir, "dev.txt")), "dev")

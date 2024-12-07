@@ -4,7 +4,7 @@ from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
 from processors.text_classify import WordsProcessor as processors
-from sklearn.metrics import accuracy_score, log_loss, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, log_loss, classification_report, confusion_matrix, roc_auc_score
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from tools.my_argparse import get_argparse
 from tqdm import tqdm
@@ -28,9 +28,9 @@ def train(args, X_train, X_dev, X_test, train_labels, dev_labels, test_labels):
         clf = LogisticRegression()
     clf.fit(X_train, train_labels)
     if hasattr(clf, "predict_proba"):
-        y_train_pred_proba = clf.predict_proba(X_train)
-        y_dev_pred_proba = clf.predict_proba(X_dev)
-        y_test_pred_proba = clf.predict_proba(X_test)
+        y_train_pred_proba = clf.predict_proba(X_train)[:,1]
+        y_dev_pred_proba = clf.predict_proba(X_dev)[:,1]
+        y_test_pred_proba = clf.predict_proba(X_test)[:,1]
     else:
         train_prob_pos = clf.decision_function(X_train)
         y_train_pred_proba = (train_prob_pos - train_prob_pos.min()) / (train_prob_pos.max() - train_prob_pos.min())
@@ -48,6 +48,10 @@ def train(args, X_train, X_dev, X_test, train_labels, dev_labels, test_labels):
     y_pred = clf.predict(X_test)
     test_loss = log_loss(test_labels, y_test_pred_proba)
     test_acc = accuracy_score(test_labels, y_pred)
+    train_auc = roc_auc_score(train_labels, y_train_pred_proba)
+    dev_auc = roc_auc_score(dev_labels, y_dev_pred_proba)
+    test_auc = roc_auc_score(test_labels, y_test_pred_proba)
+    print(f"train auc: {train_auc}, dev auc: {dev_auc}, test auc: {test_auc}")
     print(f"test loss: {test_loss}, test acc: {test_acc}")
     print(classification_report(test_labels, y_pred))
     print(confusion_matrix(test_labels, y_pred))
